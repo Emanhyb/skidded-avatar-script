@@ -1,0 +1,233 @@
+--////////////////////////////////////////////////////////////--
+--  UPDATED SABER SHOWDOWN SCRIPT (HOLD TO ATTACK VERSION)    --
+--////////////////////////////////////////////////////////////--
+
+if not game:IsLoaded() then game.Loaded:Wait() end
+print("Script Executing...")
+
+--------------------- SERVICES --------------------------------
+local Players           = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService        = game:GetService("RunService")
+local UserInputService  = game:GetService("UserInputService")
+
+--------------------- PLAYER ----------------------------------
+local LP         = Players.LocalPlayer
+local character, humanoid, animator
+local hitboxPart
+
+--------------------- REMOTES ---------------------------------
+local R = ReplicatedStorage:WaitForChild("LightsaberRemotes")
+local MouseDown   = R:WaitForChild("MouseDown")
+local Attack      = R:WaitForChild("Attack")
+local Swing       = R:WaitForChild("Swing")
+local MouseUp     = R:WaitForChild("MouseUp")
+local Block       = R:WaitForChild("Block")
+local Unblock     = R:WaitForChild("Unblock")
+local ResetDir    = R:WaitForChild("ResetSwingDirection")
+local FinishSwing = R:WaitForChild("FinishSwing")
+local OnHit       = R:WaitForChild("OnHit")
+
+--------------------- ANIMATION SETUP -------------------------
+local swingIds = {
+	[2] = "rbxassetid://12625848489",
+	[6] = "rbxassetid://12625846167",
+}
+
+local BAD = {} 
+
+local cache = {}
+for dir, id in pairs(swingIds) do
+	local a = Instance.new("Animation")
+	a.AnimationId = id
+	a.Name = "Anim_" .. dir
+	a.Parent = script
+	cache[dir] = a
+end
+
+local function watchAnimator(anim)
+	if not anim or anim:FindFirstChild("__HitBlocker") then return end
+	Instance.new("BoolValue", anim).Name = "__HitBlocker"
+
+	anim.AnimationPlayed:Connect(function(track)
+		local id = track.Animation and track.Animation.AnimationId
+		if id and BAD[id] then
+			track:Stop()
+		end
+	end)
+end
+
+--------------------- CHARACTER REFRESH ------------------------
+local function refreshCharacter()
+	character = LP.Character or LP.CharacterAdded:Wait()
+	humanoid  = character:WaitForChild("Humanoid")
+	animator  = humanoid:WaitForChild("Animator")
+	watchAnimator(animator)
+end
+
+LP.CharacterAdded:Connect(refreshCharacter)
+if LP.Character then refreshCharacter() end
+
+--------------------- SABER HITBOX ----------------------------
+local function findHitbox()
+	hitboxPart = nil
+	if not character then return end
+	local saber = character:FindFirstChild(LP.Name .. "Saber1", true)
+	local hb    = saber and saber:FindFirstChild("Hitbox", true)
+	if hb and hb:IsA("BasePart") then hitboxPart = hb end
+end
+
+local function playSwing(d, s)
+	if not cache[d] then return nil end
+	local t = animator:LoadAnimation(cache[d])
+	t:Play(0.1, 1, s)
+	return t
+end
+
+--------------------- TIMINGS & STATE -------------------------
+local swingSpeed = 1.15
+local REV_MULT   = 0.9
+local RECOVER_DELAY = 0.1
+local COMBO_MULT    = 1.5
+local COMBO_DELAY   = 0.03
+
+local enabled = false
+local seq, ptr = {}, 1
+local touchConn
+local guarding = false
+local dirs = {2, 6}
+
+local function guardOn()
+	if not guarding then Block:FireServer(); guarding = true end
+end
+
+local function guardOff()
+	if guarding then Unblock:FireServer(); guarding = false end
+end
+
+local function disconnectSwing()
+	if touchConn then touchConn:Disconnect(); touchConn = nil end
+end
+
+local function newSeq()
+	seq, ptr = {}, 1
+	for i = 1, 6 do
+		table.insert(seq, dirs[math.random(1, #dirs)])
+	end
+end
+
+local function doCamera360Flick()
+	local cam = workspace.CurrentCamera
+	if not cam then return end
+	local startCF = cam.CFrame
+	local pitch, yaw = startCF:ToEulerAnglesYXZ()
+	cam.CFrame = CFrame.new(startCF.Position) * CFrame.fromEulerAnglesYXZ(pitch, yaw + math.rad(360), 0)
+end
+
+--------------------- SWING LOOP -------------------------------
+local function swingNext()
+	if not enabled then 
+		disconnectSwing()
+		FinishSwing:FireServer()
+		Unblock:FireServer()
+		MouseUp:FireServer()
+		return 
+	end
+	
+	if ptr > #seq then newSeq() end
+
+	local dir = seq[ptr]
+	local speed = swingSpeed * ((ptr == 1) and 1 or COMBO_MULT)
+
+	findHitbox()
+	local track = playSwing(dir, speed)
+	if not track then ptr = 1; swingNext(); return end
+	
+	local gotHit = false
+	task.delay(0.01, doCamera360Flick)
+
+	track.KeyframeReached:Connect(function(f)
+		if f ~= "Start" or touchConn or not hitboxPart then return end
+		touchConn = hitboxPart.Touched:Connect(function(p)
+			if gotHit then return end
+			local tgt = p:FindFirstAncestorWhichIsA("Model")
+			if tgt and tgt ~= character and tgt:FindFirstChild("Humanoid") then
+				gotHit = true
+				guardOff()
+				MouseDown:FireServer()
+				Attack:FireServer(dir, 1, false, false)
+				Swing:FireServer()
+				OnHit:FireServer(tgt)
+				track:AdjustSpeed(-speed * REV_MULT)
+				guardOn()
+			end
+		end)
+	end)
+
+	track.Stopped:Connect(function()
+		disconnectSwing()
+		ResetDir:FireServer()
+		FinishSwing:FireServer()
+		MouseUp:FireServer()
+		ptr = (ptr % 6) + 1
+		guardOn()
+		if enabled then
+			task.delay((ptr == 1) and RECOVER_DELAY or COMBO_DELAY, swingNext)
+		end
+	end)
+end
+
+--------------------- GUI & INPUT ------------------------------
+local gui = Instance.new("ScreenGui", LP.PlayerGui)
+gui.Name = "HoldToSwingGui"
+gui.ResetOnSpawn = false
+
+local win = Instance.new("Frame", gui)
+win.Size = UDim2.new(0, 200, 0, 140)
+win.Position = UDim2.fromOffset(50, 200)
+win.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
+win.Active = true
+win.Draggable = true
+Instance.new("UICorner", win)
+
+local statusBtn = Instance.new("TextButton", win)
+statusBtn.Size = UDim2.new(1, -20, 0, 40)
+statusBtn.Position = UDim2.new(0, 10, 0, 92)
+statusBtn.Text = "Hold 'F' to Attack"
+statusBtn.AutoButtonColor = false
+
+-- Function to start attacking
+local function startAttacking()
+	if not enabled then
+		enabled = true
+		statusBtn.Text = "ATTACKING..."
+		refreshCharacter()
+		newSeq()
+		swingNext()
+	end
+end
+
+-- Function to stop attacking
+local function stopAttacking()
+	enabled = false
+	statusBtn.Text = "Hold 'F' to Attack"
+end
+
+-- Keyboard Input (Hold F)
+UserInputService.InputBegan:Connect(function(i, gp)
+	if not gp and i.KeyCode == Enum.KeyCode.F then
+		startAttacking()
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(i)
+	if i.KeyCode == Enum.KeyCode.F then
+		stopAttacking()
+	end
+end)
+
+-- Mouse Button Input (Hold Button on GUI)
+statusBtn.MouseButton1Down:Connect(startAttacking)
+statusBtn.MouseButton1Up:Connect(stopAttacking)
+
+print("Saber Showdown Hold-to-Attack Loaded!")
