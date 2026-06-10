@@ -1,0 +1,389 @@
+if not game:IsLoaded() then
+	game.Loaded:Wait()
+end
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+pcall(function()
+	game.CoreGui:FindFirstChild("ASHU_SELECTOR_V5"):Destroy()
+end)
+
+---------------------------------------------------------------------
+-- ITEMS
+---------------------------------------------------------------------
+
+local Items = {
+
+	{
+		Name = "🍍 SpongeBob",
+		Head = 109111957893840,
+		Accessories = {
+			108301737643206
+		}
+	},
+
+	{
+		Name = "😁 Big Tank",
+		Head = 109111957893840,
+		Accessories = {
+			123009354678406
+		}
+	},
+
+	{
+		Name = "🟣 Gojo Domain",
+		Head = 109111957893840,
+		Accessories = {
+			133295272028389
+		}
+	},
+
+	-----------------------------------------------------------------
+	-- NEW PARTICLE OUTFIT 🔥
+	-----------------------------------------------------------------
+
+	{
+		Name = "🔥 Particle Outfit",
+		Accessories = {
+
+			192557913,112902316,417456127,191101707,
+			11713968649,124753554,124753553,124753552,
+			226189871,150381051,132809431,1474657,
+			1744060292,74891470,21070012,112902315,
+			134774048,3756389957,63690008,63690007,
+			1028606,1028608,1028611,72082328,
+			63043890,145310594,95586028108197,
+			14180165145,6909110247,14847476597,
+			14524326503,10527433092,10527425482,
+			2316755277,2413964589,2910992580,
+			8666557244,8011584416,6736323621,
+			8462197595,9862651601,8011546326,
+			8151398197,8770132654,9243927199,
+			107320495068994,83672858218486,
+			11714032174,11386252129,9648649681,
+			9560392730,9560383533,7958798888,
+			4739738574,86789580091066,13352926142,
+			12347971656,4790788200,18148245935,
+			6970966434,4416812356,2470750640,
+			6059844687,11385735702,7674632251,
+			10488342277,2649326901,173624602,
+			11385808641,8011570046,15643315144,
+			12565936871,7871454007,10911402139,
+			11386379854,169444515,12586915194,
+			10159610478,73411887780675,7871423041,
+			9071739482,13243215822,14314252722,
+			11497603107,9781880932,233705354,
+			7674581408,10488331223,173624561,
+			12272399742,11772571896,4962407085,
+
+			2235778,63690008,63690007,
+			112902316,191101707,11713968649,
+			8666557244,8770132654,9243927199,
+			107320495068994,83672858218486,
+			8011546326,8151398197,9862651601,
+			8011584416,6736323621,8462197595,
+			10527433092,10527425482,6909110247,
+			14847476597,14524326503,14180165145,
+			95586028108197,3756389957,134774048,
+			112902315,21070012,63690008,
+			63690007,1028606,1028608,
+			1028611,72082328,63043890,
+			145310594,124753554,124753553,
+			124753552,226189871,150381051,
+
+			192557913,112902316,417456127,
+			191101707,11713968649,8666557244,
+			8770132654,9243927199,
+			107320495068994,83672858218486,
+			8011546326,8151398197,9862651601,
+			8011584416,6736323621,8462197595,
+			10527433092,10527425482,6909110247,
+			14847476597,14524326503,14180165145,
+			95586028108197,3756389957,134774048,
+			112902315,21070012,63690008,
+			63690007,1028606,1028608,
+			1028611,72082328,63043890,
+			145310594,124753554,124753553,
+			124753552,226189871,150381051
+		}
+	},
+
+	{
+		Name = "🎩 Biggest Hat",
+		Accessories = {
+			130490120165844
+		}
+	},
+
+	{
+		Name = "🐟 Biggest Fish",
+		Accessories = {
+			83275450793997
+		}
+	},
+
+	{
+		Name = "😂 Big Line",
+		Accessories = {
+			130531662832147
+		}
+	}
+}
+
+---------------------------------------------------------------------
+-- SELECTED
+---------------------------------------------------------------------
+
+local SelectedAccessories = {}
+local SelectedHead = nil
+
+---------------------------------------------------------------------
+-- APPLY
+---------------------------------------------------------------------
+
+local function ApplySelected()
+
+	local character = LocalPlayer.Character
+	if not character then return end
+
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+
+	local currentDesc = humanoid:GetAppliedDescription()
+
+	local accessories = {}
+
+	for _,id in ipairs(SelectedAccessories) do
+		accessories[tostring(id)] = id
+	end
+
+	local args = {
+		{
+			BodyParts = {
+
+				Head = SelectedHead or currentDesc.Head,
+
+				Torso = currentDesc.Torso,
+				LeftArm = currentDesc.LeftArm,
+				RightArm = currentDesc.RightArm,
+				LeftLeg = currentDesc.LeftLeg,
+				RightLeg = currentDesc.RightLeg
+			},
+
+			Accessories = accessories,
+
+			Shirt = currentDesc.Shirt,
+			Pants = currentDesc.Pants,
+			Face = currentDesc.Face,
+			TShirt = currentDesc.GraphicTShirt
+		}
+	}
+
+	ReplicatedStorage:WaitForChild("AvatarRemotes")
+	:WaitForChild("ApplyDescription")
+	:FireServer(unpack(args))
+
+	task.wait(0.4)
+
+	local char = LocalPlayer.Character
+	if char then
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum.Health = 0
+		end
+	end
+end
+
+---------------------------------------------------------------------
+-- GUI
+---------------------------------------------------------------------
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "ASHU_SELECTOR_V5"
+gui.ResetOnSpawn = false
+gui.Parent = gethui and gethui() or game.CoreGui
+
+local frame = Instance.new("Frame")
+frame.Parent = gui
+frame.Size = UDim2.new(0,250,0,320)
+frame.Position = UDim2.new(0.5,-125,0.5,-160)
+frame.BackgroundColor3 = Color3.fromRGB(18,18,18)
+frame.Active = true
+frame.Draggable = true
+
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,18)
+
+local stroke = Instance.new("UIStroke")
+stroke.Parent = frame
+stroke.Color = Color3.fromRGB(0,255,170)
+stroke.Thickness = 2
+
+local title = Instance.new("TextLabel")
+title.Parent = frame
+title.Size = UDim2.new(1,0,0,35)
+title.BackgroundTransparency = 1
+title.Text = "ASHU AVATARS"
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 15
+title.TextColor3 = Color3.fromRGB(0,255,170)
+
+local minimized = false
+
+local mini = Instance.new("TextButton")
+mini.Parent = frame
+mini.Size = UDim2.new(0,28,0,28)
+mini.Position = UDim2.new(1,-34,0,4)
+mini.BackgroundColor3 = Color3.fromRGB(30,30,30)
+mini.Text = "-"
+mini.Font = Enum.Font.GothamBold
+mini.TextSize = 18
+mini.TextColor3 = Color3.new(1,1,1)
+
+Instance.new("UICorner", mini).CornerRadius = UDim.new(1,0)
+
+local scroll = Instance.new("ScrollingFrame")
+scroll.Parent = frame
+scroll.Position = UDim2.new(0,8,0,40)
+scroll.Size = UDim2.new(1,-16,1,-95)
+scroll.BackgroundTransparency = 1
+scroll.ScrollBarThickness = 2
+scroll.CanvasSize = UDim2.new(0,0,0,0)
+
+local layout = Instance.new("UIListLayout")
+layout.Parent = scroll
+layout.Padding = UDim.new(0,8)
+
+layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 8)
+end)
+
+for _,item in ipairs(Items) do
+
+	local enabled = false
+
+	local holder = Instance.new("Frame")
+	holder.Parent = scroll
+	holder.Size = UDim2.new(1,-4,0,42)
+	holder.BackgroundColor3 = Color3.fromRGB(28,28,28)
+
+	Instance.new("UICorner", holder).CornerRadius = UDim.new(0,12)
+
+	local txt = Instance.new("TextLabel")
+	txt.Parent = holder
+	txt.Size = UDim2.new(0.6,0,1,0)
+	txt.Position = UDim2.new(0,10,0,0)
+
+	txt.BackgroundTransparency = 1
+	txt.TextXAlignment = Enum.TextXAlignment.Left
+	txt.Font = Enum.Font.GothamBold
+	txt.TextSize = 13
+	txt.TextColor3 = Color3.new(1,1,1)
+	txt.Text = item.Name
+
+	local slider = Instance.new("Frame")
+	slider.Parent = holder
+	slider.Size = UDim2.new(0,45,0,22)
+	slider.Position = UDim2.new(1,-60,0.5,-11)
+	slider.BackgroundColor3 = Color3.fromRGB(50,50,50)
+
+	Instance.new("UICorner", slider).CornerRadius = UDim.new(1,0)
+
+	local knob = Instance.new("Frame")
+	knob.Parent = slider
+	knob.Size = UDim2.new(0,18,0,18)
+	knob.Position = UDim2.new(0,2,0.5,-9)
+	knob.BackgroundColor3 = Color3.new(1,1,1)
+
+	Instance.new("UICorner", knob).CornerRadius = UDim.new(1,0)
+
+	local function Toggle()
+
+		enabled = not enabled
+
+		if enabled then
+
+			slider.BackgroundColor3 = Color3.fromRGB(0,200,120)
+			knob.Position = UDim2.new(1,-20,0.5,-9)
+
+			if item.Head then
+				SelectedHead = item.Head
+			end
+
+			for _,id in ipairs(item.Accessories) do
+				table.insert(SelectedAccessories,id)
+			end
+
+		else
+
+			slider.BackgroundColor3 = Color3.fromRGB(50,50,50)
+			knob.Position = UDim2.new(0,2,0.5,-9)
+
+			for _,id in ipairs(item.Accessories) do
+
+				for i,v in ipairs(SelectedAccessories) do
+					if v == id then
+						table.remove(SelectedAccessories,i)
+						break
+					end
+				end
+			end
+		end
+	end
+
+	holder.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+			Toggle()
+		end
+	end)
+end
+
+local equip = Instance.new("TextButton")
+equip.Parent = frame
+equip.Size = UDim2.new(0.9,0,0,40)
+equip.Position = UDim2.new(0.05,0,1,-48)
+equip.BackgroundColor3 = Color3.fromRGB(0,170,255)
+equip.Text = "EQUIP SELECTED"
+
+equip.Font = Enum.Font.GothamBold
+equip.TextSize = 14
+equip.TextColor3 = Color3.new(1,1,1)
+
+Instance.new("UICorner", equip).CornerRadius = UDim.new(0,12)
+
+equip.MouseButton1Click:Connect(function()
+
+	equip.Text = "EQUIPPING..."
+
+	ApplySelected()
+
+	task.wait(1)
+
+	equip.Text = "EQUIP SELECTED"
+end)
+
+mini.MouseButton1Click:Connect(function()
+
+	minimized = not minimized
+
+	if minimized then
+
+		scroll.Visible = false
+		equip.Visible = false
+
+		frame.Size = UDim2.new(0,250,0,40)
+
+		mini.Text = "+"
+
+	else
+
+		scroll.Visible = true
+		equip.Visible = true
+
+		frame.Size = UDim2.new(0,250,0,320)
+
+		mini.Text = "-"
+	end
+end)
